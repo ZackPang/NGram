@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="hadoop-common">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Documents/CS environment/JAR/hadoop/hadoop-common.jar!/" />
+      <root url="jar://$USER_HOME$/Documents/CS environment/JAR/hadoop/hadoop-mapreduce-client-core-0.23.1.jar!/" />
+      <root url="jar://$USER_HOME$/Documents/CS environment/JAR/hadoop/hbase-0.92.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

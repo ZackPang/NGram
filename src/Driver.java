@@ -1,0 +1,91 @@
+/**
+ * Created by zackpeng on 11/11/16.
+ */
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.db.DBConfiguration;
+import org.apache.hadoop.mapreduce.lib.db.DBOutputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+
+public class Driver {
+    /**
+     *
+     * @param: args[0] = inputFile, args[1] = outputFile, args[2] = noGram Number
+     */
+    public static void main(String[] args) throws ClassNotFoundException, IOException, InterruptedException {
+        Configuration conf1 = new Configuration();
+        conf1.set("textinputformat.record.delimiter", ".");   //This makes: read line by line --> read sentence by sentence!
+        conf1.set("noGram", args[2]);
+
+        //Job1
+        Job job1 = Job.getInstance(conf1);
+        job1.setJobName("NGram");
+        job1.setJarByClass(Driver.class);
+
+        job1.setMapperClass(A_NGramLibraryBuilder.NGramMapper.class);
+        job1.setReducerClass(A_NGramLibraryBuilder.NGramReducer.class);
+
+        job1.setOutputKeyClass(Text.class);
+        job1.setOutputValueClass(IntWritable.class);
+
+        job1.setInputFormatClass(TextInputFormat.class);
+        job1.setOutputFormatClass(TextOutputFormat.class);
+
+        TextInputFormat.setInputPaths(job1, new Path(args[0]));
+        TextOutputFormat.setOutputPath(job1, new Path(args[1]));
+
+        job1.waitForCompletion(true);
+
+
+
+
+        //Job2
+        Configuration conf2 = new Configuration();
+        conf2.set("threashold", args[3]);
+        conf2.set("n", args[4]);
+        DBConfiguration.configureDB(conf2,
+                "com.mysql.jdbc.Driver",   // driver class
+                "jdbc:mysql://17.245.76.166:8889/test", //
+                "root",    // user name
+                ""); //password
+
+        Job job2 = Job.getInstance(conf2);
+        job2.setJobName("LanguageModel");
+        job2.setJarByClass(Driver.class);
+
+        //IMPORTANT. 指定其他dependencies的位置。
+        job2.addArchiveToClassPath(new Path("/mysql/mysql-connector-java-5.0.8-bin.jar"));
+
+        job2.setMapOutputKeyClass(Text.class);
+        job2.setMapOutputValueClass(Text.class);
+        job2.setOutputKeyClass(Text.class);
+        job2.setOutputValueClass(NullWritable.class);
+
+        job2.setMapperClass(B_LanguageModel.Map.class);
+        job2.setReducerClass(B_LanguageModel.Reduce.class);
+
+        job2.setInputFormatClass(TextInputFormat.class);
+        job2.setOutputFormatClass(DBOutputFormat.class);
+
+        //define DBOutputFormat's Structure
+        DBOutputFormat.setOutput(
+                job2,
+                "output",    // output table name
+                new String[] { "starting_phrase", "following_word", "count" }   //table columns
+        );
+
+        //Path name for this job should match first job's output path name
+        TextInputFormat.setInputPaths(job2, new Path(args[1]));
+        System.exit(job2.waitForCompletion(true) ? 0 : 1);
+
+    }
+
+}
